@@ -1,0 +1,78 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/preflight.sh)",
+      "mcp__multiomics-kg__assays_by_metabolite",
+      "mcp__multiomics-kg__cluster_enrichment",
+      "mcp__multiomics-kg__differential_expression_by_gene",
+      "mcp__multiomics-kg__differential_expression_by_ortholog",
+      "mcp__multiomics-kg__discussed_by_publication",
+      "mcp__multiomics-kg__gene_aa_sequence",
+      "mcp__multiomics-kg__gene_clusters_by_gene",
+      "mcp__multiomics-kg__gene_derived_metrics",
+      "mcp__multiomics-kg__gene_details",
+      "mcp__multiomics-kg__gene_homologs",
+      "mcp__multiomics-kg__gene_neighbors",
+      "mcp__multiomics-kg__gene_ontology_terms",
+      "mcp__multiomics-kg__gene_overview",
+      "mcp__multiomics-kg__gene_response_profile",
+      "mcp__multiomics-kg__genes_by_boolean_metric",
+      "mcp__multiomics-kg__genes_by_categorical_metric",
+      "mcp__multiomics-kg__genes_by_function",
+      "mcp__multiomics-kg__genes_by_homolog_group",
+      "mcp__multiomics-kg__genes_by_metabolite",
+      "mcp__multiomics-kg__genes_by_numeric_metric",
+      "mcp__multiomics-kg__genes_by_ontology",
+      "mcp__multiomics-kg__genes_in_cluster",
+      "mcp__multiomics-kg__kg_release_info",
+      "mcp__multiomics-kg__kg_schema",
+      "mcp__multiomics-kg__list_clustering_analyses",
+      "mcp__multiomics-kg__list_derived_metrics",
+      "mcp__multiomics-kg__list_experiments",
+      "mcp__multiomics-kg__list_filter_values",
+      "mcp__multiomics-kg__list_metabolite_assays",
+      "mcp__multiomics-kg__list_metabolites",
+      "mcp__multiomics-kg__list_organisms",
+      "mcp__multiomics-kg__list_publications",
+      "mcp__multiomics-kg__metabolites_by_flags_assay",
+      "mcp__multiomics-kg__metabolites_by_gene",
+      "mcp__multiomics-kg__metabolites_by_quantifies_assay",
+      "mcp__multiomics-kg__ontology_landscape",
+      "mcp__multiomics-kg__ontology_term_details",
+      "mcp__multiomics-kg__pathway_enrichment",
+      "mcp__multiomics-kg__resolve_gene",
+      "mcp__multiomics-kg__search_homolog_groups",
+      "mcp__multiomics-kg__search_ontology",
+      "mcp__multiomics-kg__run_cypher"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__multiomics-kg__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/hooks/log-mcp-usage.sh",
+            "statusMessage": "Logging MCP tool usage"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "mcp__multiomics-kg__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/hooks/log-mcp-usage.sh",
+            "statusMessage": "Logging MCP tool failure"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  }
+}

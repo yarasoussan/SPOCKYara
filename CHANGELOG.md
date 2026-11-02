@@ -1,0 +1,377 @@
+# Changelog
+
+All notable changes to the `multiomics_research_template` are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+this project adheres to [Semantic Versioning](https://semver.org/).
+
+The **version triple** a tester runs — template / explorer / KG — is printed by
+`./scripts/preflight.sh`. This changelog covers the **template** only; the
+explorer pin lives in `pyproject.toml` and the KG version comes from
+`kg_release_info`.
+
+## [Unreleased]
+
+## [0.2.0-alpha.2] — 2026-11-01
+
+Third dogfood harvest, from the analysis of which nitrogen compounds
+*Alteromonas* passes to *Prochlorococcus* in coculture (full review:
+`docs/methodology-review-2026-10.md` in the consumer clone). Prepared for the
+first workshop, where every attendee runs the template.
+
+**This is the first public 0.2.0 release.** It includes everything in the
+0.2.0-alpha.1 section below, which was an internal test build and was never
+tagged. Coming from 0.1.0-alpha.2, read both sections. 0.2.0-alpha.1's
+folder-layout change (the Plan → Run arc) is the breaking one; this release only
+adds files (`reports/`, `index.html`, `paper.html`, agents).
+
+**The template moved and is now called Spock:**
+[TheSherLab/spock](https://github.com/TheSherLab/spock) (previously
+`wosnat/multiomics_research_template`). GitHub redirects the old URL. Existing
+clones should repoint anyway:
+`git remote set-url upstream https://github.com/TheSherLab/spock.git` (or
+`origin`, if you cloned the template directly). The project name in
+`pyproject.toml` is now `spock`.
+
+**Ships with explorer `v0.1.0-alpha.6`, for KG `0.1.0-alpha.8` or later** (alpha.9
+adds only release notifications). Run `uv sync`
+after pulling. The KG's `mcp_min_version` is now `0.1.0a6`, so an older explorer
+fails preflight's contract check. Scripts written against explorer alpha.5 can
+break or silently change results. The explorer's own release notes have the
+details; the changes most likely to affect an analysis are:
+- **`coculture_partner` is a list,** and it now includes culture-background
+  partners. `list_experiments(coculture_partner="Alteromonas")` returns 53
+  experiments, not 5. Add `treatment_type=['coculture']` to keep only
+  coculture-vs-axenic contrasts.
+- **TCDB fields changed.** `substrate_depth`, `tcdb_evidence_score`,
+  `min_evidence_score` with `ontology='tcdb'` and several TCDB edge columns are
+  gone, and `gene_overview.tcdb_family_count` is now `tcdb_assignment_count`.
+  Transport rows for MED4 drop from about 1,200 to 136.
+- **The Python keyword aliases from alpha.5 now raise `TypeError`.** For example,
+  `publication_doi` → `publication_dois`, `value_min` → `min_value`, and
+  `kg_release_info(conn)` → `kg_release_info(conn=conn)` (preflight itself had
+  to change).
+- **`gene_neighbors` caps `window` at 100.** A larger window now raises
+  `ValueError`.
+- **TCDB family-level substrates are opt-in.** Pass
+  `include_tcdb_family_substrates=True` to get them. Without it, the metabolite
+  tools warn: "No direct TCDB system call …".
+- **New warnings appear on the metabolite tools** (for example "Stereo forms hold
+  more rows …"). A script that fails on any warning it doesn't recognise will
+  stop on them.
+- **The KG content changed** (75 genome strains, 11 papers, corrected fold
+  changes, refreshed KEGG/TCDB/GO). Re-running an older analysis will not
+  reproduce its numbers.
+
+  *Release QA* re-ran the N-import coculture analysis under alpha.6:
+  - Both toy-test suites still pass.
+  - The methods scripts stopped on the removed TCDB columns, the window cap and
+    the new warnings.
+  - The MED4 transporter universe went from 365 to 225 genes (the TCDB calls
+    from 356 to 203).
+  - One axenic RNA experiment has half its former rows.
+
+### Added
+- **Figures follow the `dataviz` skill, and results come back as HTML pages.** A new reference, `figures-and-reports.md`, makes Claude Code's
+  bundled `dataviz` skill the way every figure is made. It also fixes the
+  template's colours (orange = up, blue = down, a gray midpoint, violet for
+  ranks, all checked with dataviz's validator) and the figure conventions the
+  last analysis had to reach one request at a time: a colorbar on every heatmap,
+  dividers between condition blocks, fold change with both ends labelled in
+  words, one word per cell in summary figures, and one omics layer per panel.
+  Every figure script reads the milestone's CSVs and saves both PNG and SVG.
+  Each Run milestone now produces HTML reports in `reports/`: a required
+  `summary.html` (what was asked, the findings table, links) plus one page per
+  aspect, so a data-heavy milestone isn't crammed onto one page. Pages are
+  self-contained, open offline, are interactive where hover, sort or filter
+  helps, print cleanly to PDF, and are rebuilt in place as the work iterates
+  (git keeps the history).
+- **`index.html` at each analysis root**, generated by
+  `scripts/build_report_index.py`, lists every report by milestone plus the
+  paper: the one page to bookmark.
+- **`paper.html`**, generated from `paper.md` by `scripts/build_paper.py`, has
+  every figure embedded and every table in place. It is one file to read, send,
+  or print to PDF, and the build fails visibly when `paper.md` cites a figure
+  that doesn't exist. `markdown` is now a dependency.
+- **Two named agents in `.claude/agents/`.** `kg-coder` is the Run-phase coding
+  subagent. It preloads the methodology and `dataviz`, so the domain rules travel
+  with it instead of depending on the prompt, and is continued across a
+  milestone. `critic` is the reviewer the `critical-review` skill dispatches. It
+  cannot edit files, and a fresh one runs for every pass.
+- **Design comparability is part of every framing.** For each experiment the
+  proposal now states what each arm is compared against and that reference
+  sample's physiological state, whether contrasts share samples or one fitted
+  model, and what the experiment can and cannot confirm. The researcher is asked
+  for the culture states the KG does not hold. This was the second analysis in a
+  row whose framing compared the same metric across designs that weren't
+  comparable: here, a late-decline "early" reference and contrasts that were one
+  fitted model.
+- **The Question stage asks what the result is for:** a standalone result, or
+  part of a paper (or a rewrite of one), and whose hypothesis it is. Last time
+  the Plan learned only at approval that the anchor was the researcher's own
+  preprint.
+
+### Changed
+- **The Plan phase closes on a design review, not a sign-off.** In both analyses
+  so far the researcher answered "approve?" with design input, four rounds in a
+  row the second time. The close now presents a short list of the open design
+  choices, each with a recommendation, and runs a scoped delta critic pass over
+  whatever the review changed. The `critical-review` skill now covers
+  Plan-phase delta passes.
+- **A methods milestone that builds the entity set is planned as a discovery
+  milestone.** "The methods milestone stays minimal" did not hold for the second
+  time: a method that builds transport systems, tiers and classes took 21
+  decisions across seven versions. Such a milestone now plans for that, and
+  replaces the single spot-run on one real row with four verification layers,
+  each of which caught errors the others could not:
+  1. fixtures in the real file format;
+  2. a pilot against an independent answer key built from MCP calls alone;
+  3. a review of how the module calls the explorer (an offset-paging bug passed
+     every count check);
+  4. a random sample of every bin before its rule is approved (a "Medium" tier
+     turned out to be mostly helicases).
+- **`paper.md` is paper-ready.** It is written for the reader of the eventual
+  paper and drops into a manuscript as is. It contains no internal vocabulary,
+  file paths or process history (those stay in the notebooks), uses figure
+  numbers and captions, and every citation must appear in References and vice
+  versa. Its conclusion opens with a findings table and numbered plain-language
+  meanings, with caveats in their own section. Last time the conclusion that had
+  absorbed every critic caveat was rejected as unreadable, and a separate
+  manuscript had to be written at the end.
+- **Every iteration is committed; approval gets its own commit; a push is
+  requested at the end.** "One commit per phase" is replaced by an iteration
+  commit after every round that changes files (each design-review round, do /
+  explore round, critic pass, report rebuild), made by the main thread before
+  the researcher looks. An `approved` commit closes each phase, only on
+  explicit approval. Reports and notebooks are rebuilt in place, so the commits
+  are what keep every version the researcher saw. When the evaluation milestone
+  is approved, Claude asks the researcher to push, showing what will go public,
+  and pushes only on a yes.
+- **`gaps_and_friction.md` records what worked, not only what went wrong.**
+  Entries carry a type tag (`[pitfall]`, `[bkm]`, `[kg-gap]`, `[tool]`,
+  `[method-gap]`) so logs from many analyses can be pooled into best-known
+  methods and pitfalls.
+- **The critic checks report and paper numbers against the data, checks design
+  comparability, and writes in plain language.** Its fixes now favour a separate
+  caveat over folding every caveat into the headline.
+- **Scripting guidance for Windows:** write code to a script file rather than a
+  shell heredoc, pass `encoding="utf-8"` explicitly, and add `-X utf8` when
+  running a bundled tool with `python -I`.
+- **More data libraries in the venv**, each smoke-tested on this release's
+  pandas 3:
+  - `openpyxl` and `xlrd` for Excel supplements (`.xlsx` and old `.xls`);
+  - `pyarrow` for Parquet;
+  - `tabulate` for `DataFrame.to_markdown()` in notebooks;
+  - `jinja2` for report templates;
+  - `networkx`;
+  - `matplotlib-venn`;
+  - `adjustText` for gene labels that don't overlap;
+  - `biopython`;
+  - `pytest`, which the methods milestone's toy tests need. `uv sync` used not
+    to install it.
+
+  The Python guide lists them by task. `upsetplot` was tried and left out: it
+  crashes on its first plot under pandas 3. biopython is capped below 1.87,
+  the last release with Intel-Mac packages.
+- **Python is pinned to 3.12** (`.python-version`). `uv` installs it if it's
+  missing. Every dependency has prebuilt packages for 3.12 on Windows, macOS
+  (Intel and Apple Silicon) and Linux, so nothing has to be compiled.
+- **The README install list is complete and required.** It adds git with Git
+  Bash on Windows (preflight and the usage logger are bash scripts), `jq`, a
+  Claude account, and a GitHub login on the machine for the end-of-analysis
+  push. It gives a one-line install command for Windows, macOS and Linux.
+
+### Fixed
+- **Preflight could pass with `superpowers` missing from this clone.**
+  `claude plugin list` also reports installs scoped to *other* projects, and
+  without `jq` the check matched any of them. It now parses the list with the
+  venv's Python and accepts only a user-scoped install or one scoped to this
+  repo.
+- **`jq` is required, and preflight goes red without it.** Without `jq` the usage
+  hook skips without a message, so logging was off with no sign of it.
+- **The usage log recorded wrong values or skipped calls.**
+  - `"truncated": false` was logged as `null` (jq's `false // null` is `null`), so
+    the log could never show that a result was complete.
+  - A response that was a JSON array crashed the hook, and that call went
+    unlogged.
+  - On Windows, jq ended each line with CRLF, which mixed line endings in
+    pooled logs.
+
+  All three are fixed.
+- **The anti-hallucination self-check allowed comparing fold-change magnitudes
+  across studies,** contradicting the statistics reference. It now says: compare
+  direction and rank across studies, magnitude only within one platform and
+  study, and never p-values.
+
+## [0.2.0-alpha.1] — 2026-09-15 (internal test build, not released)
+
+*Used only to dogfood the arc in the consumer clone; never tagged. Its changes
+ship in 0.2.0-alpha.2. The version string still appears in that clone's usage
+logs and in the October methodology review, so the number is not reused.*
+
+Second dogfood harvest, carried in from the consumer clone that ran the arc end
+to end (which organic carbon compounds *Alteromonas* takes up in coculture with
+*Prochlorococcus*). Minor bump rather than patch: the analysis folder layout
+changes, which is breaking for anyone mid-analysis — existing analyses keep
+their numbered structure as git history; the new arc applies to new analyses.
+Ships alongside KG `0.1.0-alpha.7` and explorer `v0.1.0-alpha.5`.
+
+### Changed
+- **Research methodology restructured from a 6-step flow into a two-phase arc:
+  Plan → Run.** The Plan phase is one grounded `superpowers:brainstorming`
+  conversation converging on a single `proposal.md` (question + KG entries +
+  *enumerated* framing — hypothesis, approach, an explicit statistics decision,
+  and a named validation set), committed once. The Run phase is three milestones
+  (`methods/` → `analysis/` → `evaluation/`, one commit each) advancing through
+  `co-define → do → show → explore → decide`. The old `1_question/` … `6_evaluate/`
+  numbered folders are replaced by `proposal.md` + the three named milestone
+  folders. Execution (KG queries, scripts) is delegated to a coding subagent
+  (`superpowers:subagent-driven-development`) that returns artifacts, not
+  conclusions; the main thread owns `notebook.md` and all judgment. The hard
+  gates were re-lettered (GATE A–E); critical review now runs on the proposal
+  and at the analysis and evaluation milestones.
+- **The arc hardened by its first full dogfood.** The four places it fell short
+  were fixed:
+  - **The methods milestone now gets an automatic critical review whenever it
+    produces a data file** later milestones consume — a parts list, a curated
+    candidate set, a classification table. Such a file carries claims (substrate
+    labels, confidence flags, class assignments) that every downstream number
+    inherits, and later milestones read it as a trusted input, so nothing else
+    re-checks it. Run on demand in the dogfood, that review found a regulatory
+    protein sitting in the candidate set as a confident sugar importer, plus a
+    gene count cited from the KG that was 30% high and had already reached the
+    paper. A methods milestone that only produces a tested function still gets
+    the review only on request.
+  - **A milestone that keeps producing after its review gets a second,
+    delta-only pass.** Exploration happens *after* the critic by construction —
+    you ask for follow-ups, and new figures and claims land during decide. In
+    the dogfood the first pass came back clean and the delta pass over what
+    followed caught a figure caption citing the wrong module's number, which had
+    inverted the interpretation drawn from it.
+  - **Toy tests use the real data's form, and one real row is spot-run by hand.**
+    A green suite proves nothing when the fixture's values are the wrong type: in
+    the dogfood, 27 passing tests hid a string-vs-boolean bug that would have
+    collapsed every control class the moment the scorer met a real CSV.
+  - **The decide gate now checks the friction log** — every friction the notebook
+    points at actually exists, and a review finding that exposed a gap the plan
+    didn't anticipate is logged as friction, not only as a fix. The log tends to
+    go quiet in exactly the late milestones where the lessons are most expensive.
+- **The framing now states what a MISS looks like, not only a HIT.** Every
+  proposal names in advance the result that would signal "no real signal" and a
+  pre-registered expected-negative class that should *not* score if the signal is
+  genuine — so a true null and a noise result are distinguishable. Both dogfood
+  runs' only clean single-module hits were expected-negatives, which is exactly
+  what let a negative be read as real rather than as a failed method. A null is a
+  valid outcome.
+- Pinned to the latest knowledge-graph tools (explorer v0.1.0-alpha.5, paired
+  with KG 0.1.0-alpha.7) — run `uv sync` after pulling. See the explorer and KG
+  release notes for what the graph can now answer; the KG's `mcp_min_version`
+  moves to `0.1.0a5`, so older explorer pins fail preflight's contract check.
+  **Re-running an analysis written against an earlier KG will not reproduce its
+  numbers.** In release QA, re-running the carbon-sources scripts against KG
+  0.1.0-alpha.7 changed three things without any error:
+  - **TCDB now carries many weak homology calls.** A default
+    `genes_by_ontology(ontology="tcdb")` for *Alteromonas* HOT1A3 returns 1,139
+    genes, up from 427; the additions are low-identity matches (median ~32%)
+    that include regulators and sensor kinases. Pass a trust filter
+    (`max_tier=2` gives 435; or `min_evidence_score=`) when a transporter set
+    has to mean "transporter".
+  - **TCDB genes attach at different levels, and family names are descriptive.**
+    Code that matches TC numbers such as `3.A.1.10` in `term_name` finds nothing
+    — read the number from `term_id` instead.
+  - **Experiments can gain timepoints under the same ID.** The HOT1A3 coculture
+    RNA-seq experiment now has days 18 and 31 alongside day 11 (day 11 is
+    unchanged); a script that did not filter on `timepoint` now pulls three
+    times the rows.
+  Freeze KG-derived inputs to CSV (as the methodology already requires) and
+  compare before trusting a re-run. Details: `docs/release-0.2.0-alpha.1-QA.md`.
+- Pinned to explorer v0.1.0-alpha.4 (superseded above in the same release).
+  Fixed a result-flattening bug: queries that mix different
+  `gene_derived_metrics` kinds no longer silently drop the scalar `value` column
+  when converting tool output to a dataframe.
+
+### Added
+- **`critical-review` skill** — a fresh-context critic subagent that re-checks a
+  claim-bearing artifact against its own files, never against the author's
+  narrative. Lens matched to the milestone (interpretation-only on the proposal
+  and evaluation; data-integrity + interpretation on analysis and data-emitting
+  methods), findings cited by file, column, and number; the author dispositions
+  each one (fixed / disputed / deferred) before the researcher sees the milestone.
+- `run_cypher` added to the pre-approved KG tools — the critic uses it to
+  spot-check a single claim against the raw graph.
+- `ontology_term_details` (new in explorer v0.1.0-alpha.5) added to the
+  pre-approved KG tools, so it runs without a permission prompt like the rest.
+- `docs/release-0.2.0-alpha.1-QA.md` — the release test run in a consumer clone:
+  what was checked, what passed, and what was fixed before release.
+- `docs/methodology-review-2026-08.md` — what the first full dogfood showed, with
+  the evidence behind each of the changes above, plus four further findings that
+  occurred only once and are being watched rather than acted on.
+- `docs/methodology-test-brief.md` — the brief for the next round: whether the
+  four changes earn their place and whether the four watch items recur.
+
+### Fixed
+- Preflight no longer crashes on Windows when printing its success line — the
+  Python check block now forces UTF-8 output so the ✓/⚠ status glyphs render on
+  cp1252 consoles instead of raising `UnicodeEncodeError` after all checks pass.
+
+## [0.1.0-alpha.2] — 2026-06-16
+
+First update after the initial clone target, harvesting lessons from the first
+two dogfood analyses (P-acquisition capacity in Prochlorococcus ecotypes;
+motility regulation in an Alteromonas coculture).
+
+### Added
+- Preflight now reports which KG deployment you're connected to and warns
+  (without blocking) if it isn't the production KG — so you can't unknowingly
+  run an analysis against a staging or alpha database. Set `EXPECTED_KG_ROLE`
+  if you mean to target a non-production KG.
+- Preflight checks that the required research plugin is enabled and tells you
+  how to install it if it's missing, instead of failing partway into step 1.
+- Research-methodology guidance harvested from the first real analyses:
+  - **Co-define each step before doing it.** The flow now opens with a
+    plain-language proposal you agree to (a `co-define` phase + GATE 0), so you
+    shape each step rather than reacting to finished work.
+  - **Reach for the highest-level tool first** (Rule 5) — don't hand-roll or
+    re-wrap analysis the package already ships (e.g. call `pathway_enrichment`
+    rather than rebuilding Fisher ORA).
+  - **Plain language with the researcher** (Rule 9) — no internal codes,
+    step-IDs, or undefined jargon in conversation.
+  - **Direction (up/down) claims need a present sign** (anti-hallucination 3.4)
+    — check the all-gene log2FC sign distribution before comparing direction; a
+    table can read all-positive because the sign was lost, not because biology
+    went one way.
+  - **Reopen path** — when a later step's data contradicts an already-locked
+    earlier step, edit the lock instead of papering over it; locks are
+    provisional until their data has been pulled.
+
+### Changed
+- Pinned to the latest knowledge-graph tools (explorer v0.1.0-alpha.3) — run
+  `uv sync` after pulling. Adds new lookups (finding the genes and pathways a
+  publication discusses) plus two fixes that bit the first dogfood:
+  genome-only and metabolomics-only strains now resolve in the single-organism
+  tools (e.g. `genes_by_ontology`) instead of being wrongly rejected, and gene
+  lookups no longer error on genes that have no expression data.
+- A typical analysis now runs without a permission prompt at nearly every step:
+  the full set of read-only KG tools is pre-approved out of the box.
+- A fresh clone no longer needs a manual plugin install — the research plugin is
+  enabled automatically when you trust the workspace.
+
+### Fixed
+- Corrected the per-timepoint and pathway-background gene-count guidance in the
+  research methodology so it points at the real data fields (counts that were
+  attributed to a field name that doesn't exist).
+- Usage logging no longer fails on machines without `jq` installed.
+- The setup instructions use a placeholder KG address instead of a hardcoded one.
+
+## [0.1.0-alpha.1] — 2026-06-10
+
+Initial alpha template — clean clone target for lab testers.
+
+### Added
+- Research skills (`research-methodology` + recipes) under `.claude/skills/`,
+  auto-loading on workspace trust (no plugin install).
+- `.mcp.json` registering the `multiomics-kg` MCP server via `uv run` (creds via `.env`).
+- `pyproject.toml` pinning the explorer to `v0.1.0-alpha.1` via git tag.
+- `scripts/preflight.sh` — DOA gate: version triple, KG compatibility contract,
+  Python API smoke call, and staleness check.
+- Usage-logging hook writing JSONL into the repo's `usage/` (committed, attributable per fork).
+- Tester onboarding `README.md`, `.env.example`, and an empty `analyses/` scaffold.

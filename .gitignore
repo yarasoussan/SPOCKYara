@@ -1,0 +1,35 @@
+# Credentials — never commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+
+# Logs are JSONL by default...
+*.jsonl
+# ...BUT usage logs ride in the repo (design spec §9): un-ignore them so testers
+# commit them alongside analyses and the maintainer aggregates by pulling forks.
+!usage/*.jsonl
+
+# Per-analysis path marker written by step-protocol scaffolding
+.analysis_dir
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings (per-machine, not shared)
+.claude/settings.local.json
+
+# Node deps (only if a figure-rendering toolchain gets added locally)
+node_modules/
+package-lock.json
+package.json
